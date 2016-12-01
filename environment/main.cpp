@@ -49,6 +49,7 @@ int main(int argc, char ** argv) {
     TCLAP::SwitchArg timeoutSwitch("t", "timeout", "Causes game environment to ignore timeouts (give all bots infinite time).", cmd, false);
 
     //Value Args
+    TCLAP::ValueArg<unsigned int> nPlayersArg("n", "nplayers", "Create a map in single-player mode that would accommodate n players", false, 1, "{1,2,3,4,5,6}", cmd);
     TCLAP::ValueArg< std::pair<signed int, signed int> > dimensionArgs("d", "dimensions", "The dimensions of the map.", false, { 0, 0 }, "a string containing two space-seprated positive integers", cmd);
     TCLAP::ValueArg<unsigned int> seedArg("s", "seed", "The seed for the map generator.", false, 0, "positive integer", cmd);
 
@@ -64,6 +65,8 @@ int main(int argc, char ** argv) {
     if(seedArg.getValue() != 0) seed = seedArg.getValue();
     else seed = (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 4294967295);
 
+    unsigned short n_players_for_map_creation = nPlayersArg.getValue();
+
     quiet_output = quietSwitch.getValue();
     bool override_names = overrideSwitch.getValue();
     bool ignore_timeout = timeoutSwitch.getValue();
@@ -76,6 +79,16 @@ int main(int argc, char ** argv) {
 
     if(mapWidth == 0 && mapHeight == 0) {
         promptDimensions(mapWidth, mapHeight);
+    }
+
+    if(unlabeledArgs.size() > 1 && n_players_for_map_creation != 1) {
+        std::cout << std::endl << "Only single-player mode enables specified n-player maps.  When entering multiple bots, please do not try to specify n." << std::endl << std::endl;
+        exit(1);
+    }
+
+    if(n_players_for_map_creation > 6 || n_players_for_map_creation < 1) {
+        std::cout << std::endl << "A map can only accommodate between 1 and 6 players." << std::endl << std::endl;
+        exit(1);
     }
 
     if(override_names) {
@@ -120,7 +133,7 @@ int main(int argc, char ** argv) {
     }
 
     //Create game. Null parameters will be ignored.
-    my_game = new Halite(mapWidth, mapHeight, seed, networking, ignore_timeout);
+    my_game = new Halite(mapWidth, mapHeight, seed, n_players_for_map_creation, networking, ignore_timeout);
 
     GameStatistics stats = my_game->runGame(names, seed, id);
     if(names != NULL) delete names;
